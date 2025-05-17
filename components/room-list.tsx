@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { DollarSign } from "lucide-react"
+import { Loader2, DollarSign } from "lucide-react"
 
 interface Room {
   id: number
@@ -18,9 +18,10 @@ interface RoomListProps {
   rooms: Room[]
   onRoomSelect: (roomId: number) => void
   selectedRoomId: number | null
+  loading?: boolean
 }
 
-export function RoomList({ rooms, onRoomSelect, selectedRoomId }: RoomListProps) {
+export function RoomList({ rooms, onRoomSelect, selectedRoomId, loading = false }: RoomListProps) {
   // Проверка наличия данных
   if (!rooms || rooms.length === 0) {
     return <div className="text-center p-4">Нет доступных номеров</div>
@@ -46,7 +47,14 @@ export function RoomList({ rooms, onRoomSelect, selectedRoomId }: RoomListProps)
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">Номера</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Номера</h2>
+        {loading && (
+          <span className="text-xs text-gray-500 flex items-center">
+            <Loader2 className="h-3 w-3 animate-spin mr-1" /> Обновление...
+          </span>
+        )}
+      </div>
 
       <div className="flex mb-4">
         <div className="flex items-center mr-4">

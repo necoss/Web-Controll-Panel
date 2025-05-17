@@ -53,6 +53,7 @@ export default function HotelDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<"list" | "layout">("list")
+  const [refreshing, setRefreshing] = useState(false)
 
   // Функция для нормализации данных комнаты для совместимости с UI
   const normalizeRoomData = (room: Room): any => {
@@ -113,8 +114,8 @@ export default function HotelDashboard() {
 
     loadData()
 
-    // Обновление данных каждые 30 секунд
-    const interval = setInterval(loadData, 30000)
+    // Обновление данных каждые 30 секунд без полной перезагрузки UI
+    const interval = setInterval(refreshData, 30000)
     return () => clearInterval(interval)
   }, [])
 
@@ -168,20 +169,94 @@ export default function HotelDashboard() {
     }
   }
 
-  if (loading) {
+  const refreshData = async () => {
+    try {
+      setError(null)
+
+      // Set a local loading state for background refresh
+      const [roomsData, occupancyData] = await Promise.all([
+        fetchRooms(),
+        fetchOccupancy().catch((err) => {
+          console.error("Error fetching occupancy during refresh:", err)
+          return null
+        }),
+      ])
+
+      const normalizedRooms = Array.isArray(roomsData) ? roomsData.map(normalizeRoomData) : []
+      setRooms(normalizedRooms)
+
+      if (occupancyData) {
+        setOccupancy(occupancyData)
+      } else {
+        // Calculate occupancy from room data if API fails
+        const totalRooms = normalizedRooms.length
+        const occupiedRooms = normalizedRooms.filter((room) => room.isOccupied).length
+        const freeRooms = totalRooms - occupiedRooms
+
+        setOccupancy({
+          totalRooms,
+          occupiedRooms,
+          freeRooms,
+          totalGuests: occupancy.totalGuests, // Keep existing value
+        })
+      }
+
+      // If a room is selected, refresh its data too
+      if (selectedRoom) {
+        const roomId = selectedRoom.id
+        const roomFromList = normalizedRooms.find((r) => r.id === roomId)
+
+        if (roomFromList) {
+          try {
+            const sensorData = await fetchSensorData(roomId)
+            const orders = await fetchRoomOrders(roomId).catch(() => selectedRoomOrders)
+
+            setSelectedRoomOrders(orders)
+            setSelectedRoom({
+              ...roomFromList,
+              sensors: sensorData,
+            })
+          } catch (error) {
+            console.error("Error refreshing selected room data:", error)
+            // Keep existing selected room data if refresh fails
+          }
+        }
+      }
+
+      console.log("Data refreshed successfully")
+    } catch (error) {
+      console.error("Error during data refresh:", error)
+      // Don't set error state to avoid disrupting the UI during background refresh
+    }
+  }
+
+  // Only show loading screen on initial load, not during refreshes
+  if (loading && rooms.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-300 mb-4" />
-        <p>Обновление данных...</p>
+      <div className="flex flex-col items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500 mb-4" />
+        <p>Загрузка данных...</p>
       </div>
     )
   }
 
   return (
     <div className="flex flex-col h-screen">
-      {/* <header className="bg-gray-800 text-white p-4">
-        <h1 className="text-2xl font-bold">WEB PANEL FOR HACKATHON WITH InDev Solution from team Lazaruk</h1>
-      </header> */}
+      <header className="bg-gray-800 text-white p-4 flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Система управления отелем</h1>
+        <button
+          onClick={async () => {
+            setRefreshing(true)
+            await refreshData()
+            setRefreshing(false)
+          }}
+          className="flex items-center bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-sm"
+          disabled={refreshing}
+        >
+          <Loader2 className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+          {refreshing ? "Обновление..." : "Обновить данные"}
+        </button>
+      </header>
 
       {error && (
         <Alert variant="destructive" className="m-4">
@@ -192,13 +267,13 @@ export default function HotelDashboard() {
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="w-1/4 bg-[#F3F5F7] p-4 overflow-y-auto">
+        <aside className="w-1/4 bg-gray-100 p-4 overflow-y-auto">
           <div className="mb-4">
             <div className="flex space-x-2 mb-4">
               <button
                 onClick={() => setViewMode("list")}
                 className={`px-3 py-1 rounded ${
-                  viewMode === "list" ? "bg-[#414141] text-white" : "bg-gray-200 text-[#414141]"
+                  viewMode === "list" ? "bg-gray-800 text-white" : "bg-gray-200 text-gray-800"
                 }`}
               >
                 Список
@@ -206,7 +281,7 @@ export default function HotelDashboard() {
               <button
                 onClick={() => setViewMode("layout")}
                 className={`px-3 py-1 rounded ${
-                  viewMode === "layout" ? "bg-[#414141] text-white" : "bg-gray-200 text-[#414141]"
+                  viewMode === "layout" ? "bg-gray-800 text-white" : "bg-gray-200 text-gray-800"
                 }`}
               >
                 Схема
@@ -214,19 +289,29 @@ export default function HotelDashboard() {
             </div>
 
             {viewMode === "list" ? (
-              <RoomList rooms={rooms} onRoomSelect={handleRoomSelect} selectedRoomId={selectedRoom?.id} />
+              <RoomList
+                rooms={rooms}
+                onRoomSelect={handleRoomSelect}
+                selectedRoomId={selectedRoom?.id}
+                loading={refreshing}
+              />
             ) : (
-              <HotelLayout rooms={rooms} onRoomSelect={handleRoomSelect} selectedRoomId={selectedRoom?.id} />
+              <HotelLayout
+                rooms={rooms}
+                onRoomSelect={handleRoomSelect}
+                selectedRoomId={selectedRoom?.id}
+                loading={refreshing}
+              />
             )}
           </div>
         </aside>
 
         <main className="flex-1 flex flex-col overflow-hidden">
-          <Dashboard occupancy={occupancy} />
+          <Dashboard occupancy={occupancy} loading={refreshing} />
 
           <div className="flex-1 p-4 overflow-y-auto">
             {selectedRoom ? (
-              <RoomDetails room={selectedRoom} orders={selectedRoomOrders} />
+              <RoomDetails room={selectedRoom} orders={selectedRoomOrders} loading={refreshing} />
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">
                 Выберите номер для просмотра подробной информации

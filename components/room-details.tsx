@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Thermometer, Droplets, Lock, Unlock, Calendar, Clock, AlertTriangle, Lightbulb } from "lucide-react"
+import { Thermometer, Droplets, Lock, Unlock, Calendar, Clock, AlertTriangle, Lightbulb, Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
 
 interface Sensors {
@@ -36,7 +36,11 @@ interface Order {
   check_out_date: string
 }
 
-export function RoomDetails({ room, orders = [] }: { room: Room; orders?: Order[] }) {
+export function RoomDetails({
+  room,
+  orders = [],
+  loading = false,
+}: { room: Room; orders?: Order[]; loading?: boolean }) {
   // Используем локальное состояние для отслеживания изменений props
   const [currentRoom, setCurrentRoom] = useState<Room>(room)
   const [currentOrders, setCurrentOrders] = useState<Order[]>(orders)
@@ -127,12 +131,19 @@ export function RoomDetails({ room, orders = [] }: { room: Room; orders?: Order[
             Этаж {floor} • {type} • {capacity} {capacity === 1 ? "место" : capacity < 5 ? "места" : "мест"}
           </p>
         </div>
-        <div
-          className={`px-3 py-1 rounded-full text-sm font-medium ${
-            isOccupied ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
-          }`}
-        >
-          {isOccupied ? "Занят" : "Свободен"}
+        <div className="flex items-center">
+          {loading && (
+            <span className="text-xs text-gray-500 flex items-center mr-3">
+              <Loader2 className="h-3 w-3 animate-spin mr-1" /> Обновление...
+            </span>
+          )}
+          <div
+            className={`px-3 py-1 rounded-full text-sm font-medium ${
+              isOccupied ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
+            }`}
+          >
+            {isOccupied ? "Занят" : "Свободен"}
+          </div>
         </div>
       </div>
 
@@ -228,12 +239,12 @@ export function RoomDetails({ room, orders = [] }: { room: Room; orders?: Order[
 
             <Card className="p-4">
               <div className="flex items-center">
-                <div className={`p-2 rounded-full mr-3 ${!lightOn ? "bg-yellow-100" : "bg-gray-100"}`}>
-                  <Lightbulb className={`h-5 w-5 ${!lightOn ? "text-yellow-600" : "text-gray-600"}`} />
+                <div className={`p-2 rounded-full mr-3 ${lightOn ? "bg-yellow-100" : "bg-gray-100"}`}>
+                  <Lightbulb className={`h-5 w-5 ${lightOn ? "text-yellow-600" : "text-gray-600"}`} />
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Свет</p>
-                  <p className="text-xl font-bold">{!lightOn ? "Включен" : "Выключен"}</p>
+                  <p className="text-xl font-bold">{lightOn ? "Включен" : "Выключен"}</p>
                 </div>
               </div>
             </Card>
@@ -266,10 +277,10 @@ export function RoomDetails({ room, orders = [] }: { room: Room; orders?: Order[
                   <span className="font-medium">
                     {capacity} {capacity === 1 ? "место" : capacity < 5 ? "места" : "мест"}
                   </span>
-                </div>Открыта
+                </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Цена за ночь:</span>
-                  <span className="font-medium">{price} BYN</span>
+                  <span className="font-medium">{price} ₽</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Статус:</span>
@@ -301,11 +312,11 @@ export function RoomDetails({ room, orders = [] }: { room: Room; orders?: Order[
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Базовая цена:</span>
-                  <span className="font-medium">{price} BYN / ночь</span>
+                  <span className="font-medium">{price} ₽ / ночь</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Месячный доход:</span>
-                  <span className="font-medium">{price * 30} BYN</span>
+                  <span className="font-medium">{price * 30} ₽</span>
                 </div>
                 {activeOrder && (
                   <div className="flex justify-between">

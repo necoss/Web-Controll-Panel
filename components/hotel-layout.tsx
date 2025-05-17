@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DollarSign } from "lucide-react"
+import { DollarSign, Loader2 } from "lucide-react"
 
 interface Room {
   id: number
@@ -20,9 +20,10 @@ interface HotelLayoutProps {
   rooms: Room[]
   onRoomSelect: (roomId: number) => void
   selectedRoomId: number | null
+  loading?: boolean
 }
 
-export function HotelLayout({ rooms, onRoomSelect, selectedRoomId }: HotelLayoutProps) {
+export function HotelLayout({ rooms, onRoomSelect, selectedRoomId, loading = false }: HotelLayoutProps) {
   // Проверка наличия данных
   const hasRooms = rooms && rooms.length > 0
 
@@ -54,7 +55,14 @@ export function HotelLayout({ rooms, onRoomSelect, selectedRoomId }: HotelLayout
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">Схема отеля</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Схема отеля</h2>
+        {loading && (
+          <span className="text-xs text-gray-500 flex items-center">
+            <Loader2 className="h-3 w-3 animate-spin mr-1" /> Обновление...
+          </span>
+        )}
+      </div>
 
       <Tabs
         value={activeFloor.toString()}
@@ -175,7 +183,14 @@ export function HotelLayout({ rooms, onRoomSelect, selectedRoomId }: HotelLayout
             </div>
 
             {/* Лифт и лестница */}
-            
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex space-x-2">
+              <div className="w-12 h-12 bg-gray-400 rounded-full flex items-center justify-center text-white font-bold">
+                Л
+              </div>
+              <div className="w-12 h-12 bg-gray-500 rounded-full flex items-center justify-center text-white font-bold">
+                С
+              </div>
+            </div>
           </div>
         </Card>
       </ScrollArea>
