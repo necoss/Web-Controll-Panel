@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Thermometer, Droplets, Lock, Unlock, Calendar, Clock, AlertTriangle, Lightbulb, Loader2 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 
 interface Sensors {
   temperature?: number
@@ -26,6 +26,7 @@ interface Room {
   price?: number
   sensors?: Sensors
   originalData?: any // Для отладки
+  _lastUpdated?: number // Временная метка последнего обновления
 }
 
 interface Order {
@@ -41,22 +42,7 @@ export function RoomDetails({
   orders = [],
   loading = false,
 }: { room: Room; orders?: Order[]; loading?: boolean }) {
-  // Используем локальное состояние для отслеживания изменений props
-  const [currentRoom, setCurrentRoom] = useState<Room>(room)
-  const [currentOrders, setCurrentOrders] = useState<Order[]>(orders)
-
-  // Обновляем локальное состояние при изменении props
-  useEffect(() => {
-    console.log("Room details updated:", room)
-    setCurrentRoom(room)
-  }, [room])
-
-  useEffect(() => {
-    console.log("Orders updated:", orders)
-    setCurrentOrders(orders)
-  }, [orders])
-
-  // Извлекаем данные из текущей комнаты
+  // Извлекаем данные из комнаты
   const {
     id,
     number = 0,
@@ -67,17 +53,16 @@ export function RoomDetails({
     price = 0,
     sensors = {},
     originalData,
-  } = currentRoom || {}
+    _lastUpdated,
+  } = room || {}
 
-  // Выводим отладочную информацию
+  // Выводим отладочную информацию при каждом рендере
   useEffect(() => {
-    console.log("Отображение комнаты:", {
-      id,
-      number,
-      isOccupied,
-      originalData,
-    })
-  }, [id, number, isOccupied, originalData])
+    console.log(
+      `Рендер RoomDetails для комнаты ${id}, последнее обновление: ${new Date(_lastUpdated || Date.now()).toISOString()}`,
+    )
+    console.log("Данные датчиков:", sensors)
+  }, [id, _lastUpdated, sensors])
 
   const {
     temperature = 22,
@@ -109,14 +94,14 @@ export function RoomDetails({
 
   // Находим текущий активный заказ (если есть)
   const today = new Date()
-  const activeOrder = currentOrders.find((order) => {
+  const activeOrder = orders.find((order) => {
     const checkInDate = new Date(order.check_in_date)
     const checkOutDate = new Date(order.check_out_date)
     return checkInDate <= today && checkOutDate >= today
   })
 
   // Находим ближайший будущий заказ (если есть)
-  const futureOrders = currentOrders
+  const futureOrders = orders
     .filter((order) => new Date(order.check_in_date) > today)
     .sort((a, b) => new Date(a.check_in_date).getTime() - new Date(b.check_in_date).getTime())
 
@@ -239,12 +224,12 @@ export function RoomDetails({
 
             <Card className="p-4">
               <div className="flex items-center">
-                <div className={`p-2 rounded-full mr-3 ${lightOn ? "bg-yellow-100" : "bg-gray-100"}`}>
-                  <Lightbulb className={`h-5 w-5 ${lightOn ? "text-yellow-600" : "text-gray-600"}`} />
+                <div className={`p-2 rounded-full mr-3 ${!lightOn ? "bg-yellow-100" : "bg-gray-100"}`}>
+                  <Lightbulb className={`h-5 w-5 ${!lightOn ? "text-yellow-600" : "text-gray-600"}`} />
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Свет</p>
-                  <p className="text-xl font-bold">{lightOn ? "Включен" : "Выключен"}</p>
+                  <p className="text-xl font-bold">{!lightOn ? "Включен" : "Выключен"}</p>
                 </div>
               </div>
             </Card>
@@ -350,10 +335,10 @@ export function RoomDetails({
         </TabsContent>
 
         <TabsContent value="orders">
-          {currentOrders.length > 0 ? (
+          {orders.length > 0 ? (
             <div className="space-y-4">
               <h3 className="font-bold mb-2">История бронирований</h3>
-              {currentOrders
+              {orders
                 .sort((a, b) => new Date(b.check_in_date).getTime() - new Date(a.check_in_date).getTime())
                 .map((order) => {
                   const checkIn = new Date(order.check_in_date)
@@ -409,9 +394,12 @@ export function RoomDetails({
           <TabsContent value="debug">
             <div className="bg-gray-100 p-4 rounded-md">
               <h3 className="font-bold mb-2">Отладочная информация</h3>
-              <pre className="text-xs overflow-auto max-h-96">{JSON.stringify(currentRoom, null, 2)}</pre>
+              <div className="mb-2">
+                Последнее обновление: {new Date(_lastUpdated || Date.now()).toLocaleTimeString()}
+              </div>
+              <pre className="text-xs overflow-auto max-h-96">{JSON.stringify(room, null, 2)}</pre>
               <h3 className="font-bold mt-4 mb-2">Заказы</h3>
-              <pre className="text-xs overflow-auto max-h-96">{JSON.stringify(currentOrders, null, 2)}</pre>
+              <pre className="text-xs overflow-auto max-h-96">{JSON.stringify(orders, null, 2)}</pre>
             </div>
           </TabsContent>
         )}

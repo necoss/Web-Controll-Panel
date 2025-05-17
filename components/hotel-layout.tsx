@@ -182,15 +182,6 @@ export function HotelLayout({ rooms, onRoomSelect, selectedRoomId, loading = fal
                 })}
             </div>
 
-            {/* Лифт и лестница */}
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex space-x-2">
-              <div className="w-12 h-12 bg-gray-400 rounded-full flex items-center justify-center text-white font-bold">
-                Л
-              </div>
-              <div className="w-12 h-12 bg-gray-500 rounded-full flex items-center justify-center text-white font-bold">
-                С
-              </div>
-            </div>
           </div>
         </Card>
       </ScrollArea>
